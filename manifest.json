@@ -1,0 +1,18 @@
+{
+  "name": "MUDEPA - Mutuelle pour le Développement de Paoufla",
+  "short_name": "MUDEPA",
+  "description": "Application de gestion de la mutuelle MUDEPA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1565C0",
+  "theme_color": "#1565C0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
