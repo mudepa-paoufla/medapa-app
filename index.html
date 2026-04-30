@@ -1531,52 +1531,19 @@ function prtH(html){
 // ============================================================
 // GESTION RETOUR DEPUIS WHATSAPP
 // ============================================================
-function saveStateBeforeWA(){
+function openWA(url){
+  // Sauvegarder l'état actuel AVANT d'ouvrir WhatsApp
   try{
-    localStorage.setItem('md_last_view', JSON.stringify({
+    localStorage.setItem('md_wa_state', JSON.stringify({
       view: ST.view,
       p: ST.p,
+      user: ST.user ? ST.user.id : null,
       ts: Date.now()
     }));
   }catch(e){}
-}
-
-function restoreStateAfterWA(){
-  try{
-    const saved = localStorage.getItem('md_last_view');
-    if(!saved) return;
-    const state = JSON.parse(saved);
-    // Restaurer seulement si récent (moins de 5 minutes)
-    if(Date.now() - state.ts < 5 * 60 * 1000){
-      ST.view = state.view;
-      ST.p = state.p;
-      localStorage.removeItem('md_last_view');
-      return true;
-    }
-    localStorage.removeItem('md_last_view');
-  }catch(e){}
-  return false;
-}
-
-// Ouvrir WhatsApp en sauvegardant l'état
-function openWA(url){
-  saveStateBeforeWA();
-  // Sur mobile, utiliser location.href est plus fiable que window.open
-  // pour revenir à l'appli ensuite
+  // Ouvrir WhatsApp (sur mobile, location.href est plus fiable)
   window.location.href = url;
 }
-
-// Détecter le retour dans l'appli (visibilitychange)
-document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible' && ST.user){
-    const restored = restoreStateAfterWA();
-    if(restored){
-      renderView();
-      renderNav();
-      toast('Retour depuis WhatsApp ✓');
-    }
-  }
-});
 
 // ============================================================
 // DÉMARRAGE
@@ -1618,6 +1585,41 @@ window.addEventListener('offline', ()=>{
   }
   // Masquer loading, afficher login
   document.getElementById('loading').classList.add('hide');
+
+  // Vérifier s'il y a un état sauvegardé avant WhatsApp
+  try{
+    const saved = localStorage.getItem('md_wa_state');
+    if(saved){
+      const waState = JSON.parse(saved);
+      // Valide seulement si moins de 10 minutes
+      if(Date.now() - waState.ts < 10 * 60 * 1000){
+        // Trouver l'utilisateur correspondant
+        const users = CACHE['users'] || [];
+        const u = users.find(x => x.id === waState.user);
+        if(u && u.active){
+          // Restaurer session et état
+          ST.user = u;
+          ST.view = waState.view || 'dashboard';
+          ST.p = waState.p || {};
+          localStorage.removeItem('md_wa_state');
+          // Afficher l'appli directement sans login
+          document.getElementById('lp').style.display='none';
+          document.getElementById('uav').textContent = u.login[0].toUpperCase();
+          if(window.innerWidth > 768){
+            document.getElementById('tb').style.left='var(--sw)';
+            document.getElementById('ct').style.marginLeft='var(--sw)';
+          }
+          renderNav();
+          renderView();
+          toast('Bienvenue de retour ! ✓');
+          return; // Ne pas afficher le login
+        }
+      }
+      localStorage.removeItem('md_wa_state');
+    }
+  }catch(e){}
+
+  // Afficher login normalement
   document.getElementById('lp').style.display='flex';
 })();
 
