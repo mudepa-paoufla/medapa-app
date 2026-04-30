@@ -921,7 +921,7 @@ function waCM(id){
   const c=(CACHE['cm']||[]).find(x=>x.id===id);if(!c)return;
   const m=gMb(c.matricule);if(!m?.whatsapp)return toast('WhatsApp non disponible','wn');
   const msg=`*MUDEPA — Reçu Cotisation Mensuelle*\n\nMembre: ${m.nom} ${m.prenom}\nMatricule: ${c.matricule}\nMois: ${c.mois} ${c.annee}\nMontant: ${fmt(c.montant)}\nDate: ${fD(c.datePaiement)}\n\n_Mutuelle pour le Développement de Paoufla_`;
-  window.open(`https://wa.me/${m.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank');
+  openWA(`https://wa.me/${m.whatsapp.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
 }
 
 // ============================================================
@@ -1527,6 +1527,56 @@ function prtH(html){
   </head><body>${html}<br><button onclick="window.print()" style="margin:10px;padding:8px 20px;background:#1565C0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimer<\/button><\/body><\/html>`);
   w.document.close();setTimeout(()=>w.focus(),400);
 }
+
+// ============================================================
+// GESTION RETOUR DEPUIS WHATSAPP
+// ============================================================
+function saveStateBeforeWA(){
+  try{
+    localStorage.setItem('md_last_view', JSON.stringify({
+      view: ST.view,
+      p: ST.p,
+      ts: Date.now()
+    }));
+  }catch(e){}
+}
+
+function restoreStateAfterWA(){
+  try{
+    const saved = localStorage.getItem('md_last_view');
+    if(!saved) return;
+    const state = JSON.parse(saved);
+    // Restaurer seulement si récent (moins de 5 minutes)
+    if(Date.now() - state.ts < 5 * 60 * 1000){
+      ST.view = state.view;
+      ST.p = state.p;
+      localStorage.removeItem('md_last_view');
+      return true;
+    }
+    localStorage.removeItem('md_last_view');
+  }catch(e){}
+  return false;
+}
+
+// Ouvrir WhatsApp en sauvegardant l'état
+function openWA(url){
+  saveStateBeforeWA();
+  // Sur mobile, utiliser location.href est plus fiable que window.open
+  // pour revenir à l'appli ensuite
+  window.location.href = url;
+}
+
+// Détecter le retour dans l'appli (visibilitychange)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible' && ST.user){
+    const restored = restoreStateAfterWA();
+    if(restored){
+      renderView();
+      renderNav();
+      toast('Retour depuis WhatsApp ✓');
+    }
+  }
+});
 
 // ============================================================
 // DÉMARRAGE
